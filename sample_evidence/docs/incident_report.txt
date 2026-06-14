@@ -6,3 +6,4 @@ Severity: HIGH
 Unauthorized access detected on primary database server.
 Login attempts from 192.168.1.105 at 03:47 AM.
 Data exfiltration suspected. Immediate forensic investigation required.
+TAMPERED: Additional suspicious entry added.

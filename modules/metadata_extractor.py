@@ -86,6 +86,7 @@ def extract_metadata(evidence_path: Path) -> List[Dict]:
 
         entry: Dict[str, Any] = {
             "name": file_path.name,
+            "rel_path": str(file_path.relative_to(evidence_path)).replace("\\", "/"),
             "path": str(file_path.resolve()),
             "extension": file_path.suffix.lower(),
             "size_bytes": stat.st_size,
