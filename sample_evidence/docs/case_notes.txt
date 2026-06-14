@@ -1,0 +1,4 @@
+CASE NOTES — Investigator: J. Smith
+Collected USB drive from suspect workstation (Desk 7, Floor 3).
+Device serial: USB-2024-XYZ-789
+Chain of custody maintained throughout collection.

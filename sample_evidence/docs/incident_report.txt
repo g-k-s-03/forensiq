@@ -1,0 +1,8 @@
+INCIDENT REPORT
+Date: 2024-01-15
+Location: Server Room B
+Severity: HIGH
+
+Unauthorized access detected on primary database server.
+Login attempts from 192.168.1.105 at 03:47 AM.
+Data exfiltration suspected. Immediate forensic investigation required.

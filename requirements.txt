@@ -1,0 +1,7 @@
+typer[all]
+exifread
+Pillow
+piexif
+pandas
+reportlab
+jinja2
