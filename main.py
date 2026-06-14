@@ -14,11 +14,13 @@ from modules.browser_forensics import (
     get_dns_cache,
     get_prefetch_evidence,
 )
+from modules.timeline_builder import build_timeline, export_timeline_json
 
 app = typer.Typer(help="ForensIQ — Digital Forensics Evidence Analyzer")
 console = Console()
 
 _SEVERITY_STYLE = {"HIGH": "bold red", "MEDIUM": "yellow", "LOW": "cyan"}
+_CONF_STYLE     = {"CONFIRMED": "green", "INFERRED": "yellow", "RECOVERED": "cyan"}
 
 
 def _trunc(s: str, n: int = 58) -> str:
@@ -265,6 +267,103 @@ def analyze(
             )
         console.print(pf_table)
 
+    # ── Phase 5: Timeline Builder ────────────────────────────────────────────
+    console.print()
+    console.rule("[bold blue]Forensic Timeline[/bold blue]")
+
+    timeline = build_timeline(results, artifacts, recovered, dns_entries, pf_entries)
+
+    tl_file = output_path / f"{case_id}_timeline.json"
+    export_timeline_json(timeline, tl_file)
+    console.print(f"  Timeline exported -> [cyan]{tl_file}[/cyan]  ({len(timeline)} events)")
+    console.print()
+
+    if timeline:
+        tl_table = Table(title="Forensic Timeline", box=box.ROUNDED, show_lines=True)
+        tl_table.add_column("Timestamp",   width=20)
+        tl_table.add_column("Source",      width=16)
+        tl_table.add_column("Event Type",  width=18)
+        tl_table.add_column("Confidence",  width=11)
+        tl_table.add_column("Description", min_width=40)
+        for ev in timeline:
+            conf  = ev["confidence"]
+            style = _CONF_STYLE.get(conf, "white")
+            tl_table.add_row(
+                ev["timestamp"],
+                ev["source"],
+                ev["event_type"],
+                f"[{style}]{conf}[/{style}]",
+                _trunc(ev["description"], 60),
+            )
+        console.print(tl_table)
+
+    # ── Forensic Narrative ───────────────────────────────────────────────────
+    console.print()
+    console.rule("[bold]Forensic Narrative[/bold]")
+    console.print()
+
+    confirmed_dated = [
+        e for e in timeline
+        if e["confidence"] == "CONFIRMED" and e["timestamp_sort"] > 0
+    ]
+    earliest = confirmed_dated[0]  if confirmed_dated else None
+    latest   = confirmed_dated[-1] if len(confirmed_dated) > 1 else None
+
+    visits       = [e for e in timeline if e["event_type"] == "BROWSER_VISIT"]
+    browser_srcs = sorted({
+        e["source"] for e in visits if e["source"] not in ("Freelist Recovery",)
+    })
+    recov_events = [e for e in timeline if e["confidence"] == "RECOVERED"]
+    af_flags     = [f for f in flags if f["type"] == "ANTI_FORENSIC"]
+    dis_flags    = [f for f in flags if f["type"] == "DISGUISED_FILE"]
+
+    narrative_lines = []
+    if earliest:
+        narrative_lines.append(
+            f"The earliest confirmed event on record occurred on "
+            f"{earliest['timestamp']}: {earliest['description']}."
+        )
+    if latest:
+        narrative_lines.append(
+            f"The most recent confirmed event on record occurred on "
+            f"{latest['timestamp']}: {latest['description']}."
+        )
+    if visits:
+        b_str = ", ".join(browser_srcs) if browser_srcs else "an unidentified browser"
+        narrative_lines.append(
+            f"A total of {len(visits)} browser activity event(s) were identified, "
+            f"sourced from: {b_str}."
+        )
+    if recov_events:
+        narrative_lines.append(
+            f"{len(recov_events)} deleted or unindexed record(s) were recovered from "
+            f"SQLite freelist pages or WAL files, indicating browsing activity that "
+            f"was subsequently removed from the active history index."
+        )
+    else:
+        narrative_lines.append(
+            "No deleted or recovered browser records were identified in this evidence set."
+        )
+    if af_flags:
+        narrative_lines.append(
+            f"ALERT: {len(af_flags)} anti-forensic indicator(s) were detected. "
+            f"File content was modified while timestamps remained unchanged, consistent "
+            f"with deliberate timestamp manipulation to conceal activity."
+        )
+    if dis_flags:
+        narrative_lines.append(
+            f"ALERT: {len(dis_flags)} file(s) exhibited extension-to-content mismatches, "
+            f"indicating deliberate file type disguising."
+        )
+    narrative_lines.append(
+        "All findings are observations only. Forensic conclusions require examiner "
+        "review and certification under Section 65B of the Indian Evidence Act, 1872."
+    )
+
+    for line in narrative_lines:
+        console.print(f"  {line}")
+        console.print()
+
     # ── Summary ───────────────────────────────────────────────────────────────
     hidden_count  = sum(1 for r in results if r["name"].startswith("."))
     exif_count    = len(exif_files)
@@ -300,6 +399,15 @@ def analyze(
     console.print(f"  Downloads found:                [bold]{len(all_downloads)}[/bold]")
     console.print(f"  DNS cache entries:              [bold]{len(dns_entries)}[/bold]")
     console.print(f"  Prefetch browser traces:        [bold]{len(pf_entries)}[/bold]")
+    tl_confirmed = sum(1 for e in timeline if e["confidence"] == "CONFIRMED")
+    tl_inferred  = sum(1 for e in timeline if e["confidence"] == "INFERRED")
+    tl_recovered = sum(1 for e in timeline if e["confidence"] == "RECOVERED")
+    console.print(
+        f"  Timeline events:                [bold]{len(timeline)}[/bold] total  "
+        f"([green]{tl_confirmed} CONFIRMED[/green] / "
+        f"[yellow]{tl_inferred} INFERRED[/yellow] / "
+        f"[cyan]{tl_recovered} RECOVERED[/cyan])"
+    )
     console.print()
 
 

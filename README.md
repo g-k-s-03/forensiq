@@ -68,6 +68,27 @@ A Python CLI tool for analyzing digital forensics evidence.
 > by other artifacts. Raw byte scanning may surface fragments, partial URLs, or
 > data from earlier sessions that were legitimately overwritten.
 
+### Phase 5 — Forensic Timeline Builder
+- **Unified chronological timeline**: merges all artifact sources into a single sorted event list:
+  - `FILE_CREATED` / `FILE_MODIFIED` — from file system metadata
+  - `BROWSER_VISIT` — from live browser history (Chrome/Edge/Firefox)
+  - `BROWSER_DOWNLOAD` — from browser download records
+  - `BROWSER_COOKIE` — from browser cookie stores (using expiry as event anchor)
+  - `DNS_LOOKUP` — from DNS cache snapshot (timestamped at analysis time)
+  - `BROWSER_EXECUTED` — from Windows Prefetch (last-run timestamp)
+- **Confidence levels** assigned per event:
+  - `CONFIRMED` (green) — directly retrieved from a live, indexed source
+  - `INFERRED` (yellow) — derived artifact (e.g. DNS cache entry, timestamp anomaly)
+  - `RECOVERED` (cyan) — retrieved from deleted/unallocated SQLite pages or WAL files
+- **JSON export**: timeline written to `output/<case_id>_timeline.json` (artifact payloads excluded to keep file compact)
+- **Forensic Narrative**: auto-generated template paragraph covering earliest/latest confirmed events, browser activity summary, recovered record count, and any anti-forensic or disguised-file alerts; closes with the mandatory Section 65B disclaimer
+- Summary line: `Timeline events: N total (X CONFIRMED / Y INFERRED / Z RECOVERED)`
+
+> **Confidence note:** `CONFIRMED` does not mean the event is legally admissible —
+> it means the record was found in an active, indexed location. All findings
+> require examiner review. The narrative disclaimer (`Section 65B of the Indian
+> Evidence Act, 1872`) is printed automatically on every run.
+
 ---
 
 ## Installation
@@ -183,6 +204,6 @@ forensiq/
 
 ## Roadmap
 
-- **Phase 4** — PDF report generation with ReportLab + Jinja2 templates
-- **Phase 5** — Chain of custody log, investigator sign-off
-- **Phase 6** — File carving, deleted file recovery
+- **Phase 6** — PDF report generation with ReportLab + Jinja2 templates
+- **Phase 7** — Chain of custody log, investigator sign-off
+- **Phase 8** — File carving, deleted file recovery
