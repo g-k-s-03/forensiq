@@ -8,11 +8,21 @@ from rich import box
 
 from modules.metadata_extractor import extract_metadata
 from modules.hash_checker import compute_hashes, detect_tampering
+from modules.browser_forensics import (
+    extract_browser_artifacts,
+    recover_deleted_history,
+    get_dns_cache,
+    get_prefetch_evidence,
+)
 
 app = typer.Typer(help="ForensIQ — Digital Forensics Evidence Analyzer")
 console = Console()
 
 _SEVERITY_STYLE = {"HIGH": "bold red", "MEDIUM": "yellow", "LOW": "cyan"}
+
+
+def _trunc(s: str, n: int = 58) -> str:
+    return s if len(s) <= n else s[: n - 3] + "..."
 
 
 @app.callback()
@@ -150,6 +160,111 @@ def analyze(
     else:
         console.print("  [green]No tamper flags detected.[/green]")
 
+    # ── Phase 4: Browser Forensics ───────────────────────────────────────────
+    console.print()
+    console.rule("[bold blue]Browser Forensics[/bold blue]")
+
+    artifacts   = extract_browser_artifacts(evidence_dir)
+    recovered   = recover_deleted_history(evidence_dir)
+    dns_entries = get_dns_cache()
+    pf_entries  = get_prefetch_evidence()
+
+    all_history  = artifacts["history"] + [r for r in recovered if r.get("type") == "history"]
+    all_downloads = artifacts["downloads"]
+    all_cookies   = artifacts["cookies"]
+
+    # ── History table ────────────────────────────────────────────────────────
+    if all_history:
+        hist_table = Table(title="Browser History", box=box.ROUNDED, show_lines=True)
+        hist_table.add_column("Source",     width=16)
+        hist_table.add_column("URL / Title",min_width=40)
+        hist_table.add_column("Last Visit", width=20)
+        hist_table.add_column("Visits",     width=7)
+        hist_table.add_column("Rec.",       width=5)
+        for r in all_history:
+            url_cell  = _trunc(r.get("url", ""))
+            title     = r.get("title", "")
+            cell_text = f"{url_cell}\n[dim]{_trunc(title, 55)}[/dim]" if title else url_cell
+            rec_flag  = "[yellow]Yes[/yellow]" if r.get("recovered") else "[dim]No[/dim]"
+            hist_table.add_row(
+                r.get("source", ""),
+                cell_text,
+                r.get("last_visit_time", ""),
+                str(r.get("visit_count", "")),
+                rec_flag,
+            )
+        console.print(hist_table)
+    else:
+        console.print("  [dim]No browser history records found.[/dim]")
+
+    # ── Downloads table ──────────────────────────────────────────────────────
+    if all_downloads:
+        console.print()
+        dl_table = Table(title="Browser Downloads", box=box.ROUNDED, show_lines=True)
+        dl_table.add_column("Source",      width=14)
+        dl_table.add_column("Target Path / URL", min_width=40)
+        dl_table.add_column("Size",        width=10)
+        dl_table.add_column("Start Time",  width=20)
+        dl_table.add_column("Danger",      width=7)
+        for r in all_downloads:
+            path = r.get("target_path") or r.get("url", "")
+            size = f"{r.get('total_bytes', 0):,} B" if r.get("total_bytes") else "N/A"
+            danger = str(r.get("danger_type", "")) if r.get("danger_type") else "[dim]0[/dim]"
+            dl_table.add_row(
+                r.get("source", ""),
+                _trunc(path),
+                size,
+                r.get("start_time", "N/A"),
+                danger,
+            )
+        console.print(dl_table)
+
+    # ── Cookies table ────────────────────────────────────────────────────────
+    if all_cookies:
+        console.print()
+        ck_table = Table(title="Browser Cookies", box=box.ROUNDED, show_lines=True)
+        ck_table.add_column("Source",   width=14)
+        ck_table.add_column("Host",     width=22)
+        ck_table.add_column("Name",     width=18)
+        ck_table.add_column("Expires",  width=20)
+        ck_table.add_column("Sec",      width=4)
+        ck_table.add_column("Http",     width=4)
+        for r in all_cookies:
+            ck_table.add_row(
+                r.get("source", ""),
+                r.get("host_key", ""),
+                r.get("name", ""),
+                str(r.get("expires_utc", "")),
+                "[green]Y[/green]" if r.get("is_secure") else "N",
+                "[green]Y[/green]" if r.get("is_httponly") else "N",
+            )
+        console.print(ck_table)
+
+    # ── DNS Cache table ──────────────────────────────────────────────────────
+    if dns_entries:
+        console.print()
+        dns_table = Table(title="DNS Cache", box=box.ROUNDED, show_lines=True)
+        dns_table.add_column("Hostname", min_width=40)
+        dns_table.add_column("Detail",   style="dim")
+        for e in dns_entries:
+            dns_table.add_row(e.get("hostname", ""), e.get("detail", ""))
+        console.print(dns_table)
+
+    # ── Prefetch table ───────────────────────────────────────────────────────
+    if pf_entries:
+        console.print()
+        pf_table = Table(title="Browser Prefetch Evidence", box=box.ROUNDED, show_lines=True)
+        pf_table.add_column("Browser",       width=16)
+        pf_table.add_column("Prefetch File", min_width=30)
+        pf_table.add_column("Last Executed", width=20)
+        for e in pf_entries:
+            pf_table.add_row(
+                e.get("browser", ""),
+                e.get("filename", ""),
+                e.get("last_executed", ""),
+            )
+        console.print(pf_table)
+
     # ── Summary ───────────────────────────────────────────────────────────────
     hidden_count  = sum(1 for r in results if r["name"].startswith("."))
     exif_count    = len(exif_files)
@@ -176,6 +291,15 @@ def analyze(
     console.print(f"  Anti-forensic indicators:       [bold red]{antiforensic_count}[/bold red]")
     console.print(f"  Disguised files:                [bold red]{disguised_count}[/bold red]")
     console.print(f"  High entropy files:             [bold yellow]{high_entropy_count}[/bold yellow]")
+    live_hist_count  = len(artifacts["history"])
+    recov_hist_count = len([r for r in recovered if r.get("type") == "history"])
+    console.print(
+        f"  Browser history records:        [bold]{live_hist_count}[/bold] (live)"
+        f" + [bold yellow]{recov_hist_count}[/bold yellow] (recovered)"
+    )
+    console.print(f"  Downloads found:                [bold]{len(all_downloads)}[/bold]")
+    console.print(f"  DNS cache entries:              [bold]{len(dns_entries)}[/bold]")
+    console.print(f"  Prefetch browser traces:        [bold]{len(pf_entries)}[/bold]")
     console.print()
 
 

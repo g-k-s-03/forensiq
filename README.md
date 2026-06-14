@@ -43,6 +43,31 @@ A Python CLI tool for analyzing digital forensics evidence.
 > **Note:** All tamper determinations are rule-based and deterministic — no AI inference is used.
 > Each flag cites the specific forensic rule under which it was raised.
 
+### Phase 4 — Browser Forensics & Deleted History Recovery
+- **Live extraction** from Chrome/Edge and Firefox SQLite databases:
+  - Chrome/Edge: `History` (urls + downloads tables), `Cookies`
+  - Firefox: `places.sqlite` (moz_places + download annotations), `cookies.sqlite`
+  - Always works on a file copy to avoid locking the live browser database
+- **WAL (Write-Ahead Log) recovery**: if a `-wal` companion file is present and non-empty,
+  SQLite auto-merges it on connection — records appearing only in the WAL
+  (not yet checkpointed to the main DB) are surfaced and marked `Recovered: Yes`
+- **Freelist page scanning**: reads raw DB bytes and applies a regex
+  (`https?://[\x21-\x7e]{4,255}`) to find URL strings in SQLite's
+  freed/unallocated pages that are no longer reachable through the B-tree index.
+  Results are deduplicated against live records.
+- **DNS cache snapshot**: runs `ipconfig /displaydns` (Windows) and extracts
+  all resolved hostnames — cross-referencing DNS entries with browser history
+  can corroborate or contradict claimed browsing activity.
+- **Prefetch evidence**: lists Chrome/Firefox/Edge `.pf` files in
+  `C:\Windows\Prefetch` with their last-execution timestamps.
+- Summary reports: live history count, recovered record count, download count,
+  DNS entries, and prefetch traces.
+
+> **Important:** Deleted record recovery is forensically significant but results
+> should be treated as **INFERRED** evidence, not **CONFIRMED**, until corroborated
+> by other artifacts. Raw byte scanning may surface fragments, partial URLs, or
+> data from earlier sessions that were legitimately overwritten.
+
 ---
 
 ## Installation
@@ -50,7 +75,9 @@ A Python CLI tool for analyzing digital forensics evidence.
 ```bash
 cd forensiq
 pip install -r requirements.txt
-python create_samples.py   # generate sample evidence files
+python create_samples.py          # Phase 1 evidence (metadata, EXIF)
+python create_phase3_samples.py   # Phase 3 evidence (disguised file, high-entropy, wiped JPEG)
+python create_browser_samples.py  # Phase 4 evidence (Chrome/Firefox SQLite DBs)
 ```
 
 ---
