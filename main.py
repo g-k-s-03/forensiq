@@ -13,7 +13,6 @@ app = typer.Typer(help="ForensIQ — Digital Forensics Evidence Analyzer")
 console = Console()
 
 _SEVERITY_STYLE = {"HIGH": "bold red", "MEDIUM": "yellow", "LOW": "cyan"}
-_SEVERITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 
 
 @app.callback()
@@ -115,7 +114,6 @@ def analyze(
         console.print(f"  Baseline loaded: [bold]{len(baseline_hashes)}[/bold] entries")
 
     flags = detect_tampering(results, baseline_hashes, current_hashes)
-    flags.sort(key=lambda f: _SEVERITY_ORDER.get(f["severity"], 99))
 
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -130,16 +128,20 @@ def analyze(
             box=box.ROUNDED,
             show_lines=True,
         )
-        flag_table.add_column("Severity", width=10)
-        flag_table.add_column("Type", width=20)
+        flag_table.add_column("Sev", width=8)
+        flag_table.add_column("Rule", style="dim", width=6)
+        flag_table.add_column("Type", width=22)
         flag_table.add_column("File", style="bold", min_width=24)
         flag_table.add_column("Detail")
 
         for flag in flags:
             sev = flag["severity"]
             style = _SEVERITY_STYLE.get(sev, "white")
+            rule_str = flag.get("rule", "")
+            rule_id = rule_str.split(":")[0].replace("Rule ", "").strip() if rule_str else ""
             flag_table.add_row(
                 f"[{style}]{sev}[/{style}]",
+                rule_id,
                 flag["type"],
                 flag["file"],
                 flag["detail"],
@@ -149,12 +151,15 @@ def analyze(
         console.print("  [green]No tamper flags detected.[/green]")
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    hidden_count = sum(1 for r in results if r["name"].startswith("."))
-    exif_count = len(exif_files)
+    hidden_count  = sum(1 for r in results if r["name"].startswith("."))
+    exif_count    = len(exif_files)
     anomaly_count = sum(1 for r in results if r.get("anomalies"))
     high = sum(1 for f in flags if f["severity"] == "HIGH")
-    med = sum(1 for f in flags if f["severity"] == "MEDIUM")
-    low = sum(1 for f in flags if f["severity"] == "LOW")
+    med  = sum(1 for f in flags if f["severity"] == "MEDIUM")
+    low  = sum(1 for f in flags if f["severity"] == "LOW")
+    antiforensic_count = sum(1 for f in flags if f["type"] == "ANTI_FORENSIC")
+    disguised_count    = sum(1 for f in flags if f["type"] == "DISGUISED_FILE")
+    high_entropy_count = sum(1 for f in flags if f["type"] == "HIGH_ENTROPY")
 
     console.print()
     console.rule("[bold]Analysis Summary[/bold]")
@@ -168,6 +173,9 @@ def analyze(
         f"[yellow]{med} MEDIUM[/yellow] / "
         f"[cyan]{low} LOW[/cyan])"
     )
+    console.print(f"  Anti-forensic indicators:       [bold red]{antiforensic_count}[/bold red]")
+    console.print(f"  Disguised files:                [bold red]{disguised_count}[/bold red]")
+    console.print(f"  High entropy files:             [bold yellow]{high_entropy_count}[/bold yellow]")
     console.print()
 
 

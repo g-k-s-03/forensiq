@@ -26,6 +26,23 @@ A Python CLI tool for analyzing digital forensics evidence.
   - `HIDDEN_FILE` (LOW) — dot-prefixed filename
 - Color-coded tamper flags table: HIGH=red, MEDIUM=yellow, LOW=cyan
 
+### Phase 3 — Hash Integrity Engine (Deep Analysis)
+- Every flag now cites a specific forensic rule ID (R-01 through R-10)
+- **Entropy analysis** — Shannon entropy on plaintext file types (.txt, .log, .csv, etc.):
+  - `HIGH_ENTROPY` (MEDIUM) — entropy > 7.2 suggests encrypted/compressed payload
+- **Magic bytes detection** — reads first 16 bytes and compares against known signatures:
+  - Detects: JPEG, PNG, PDF, ZIP/Office, OLE, RTF, PE Executable, ELF
+  - `DISGUISED_FILE` (HIGH) — file extension does not match internal magic bytes
+  - `SUSPICIOUS_EXECUTABLE` (HIGH) — .exe/.dll found in evidence collection
+- **EXIF strip detection**:
+  - `EXIF_STRIPPED` (MEDIUM) — JPEG with no EXIF tags, consistent with anti-forensic wiping
+- **Anti-forensic detection**:
+  - `ANTI_FORENSIC` (HIGH) — file hash changed but timestamps appear untouched (timestamp preservation attack)
+- Summary now reports anti-forensic indicators, disguised files, and high-entropy files separately
+
+> **Note:** All tamper determinations are rule-based and deterministic — no AI inference is used.
+> Each flag cites the specific forensic rule under which it was raised.
+
 ---
 
 ## Installation
@@ -120,8 +137,25 @@ forensiq/
 
 ---
 
+## Tamper Rule Reference
+
+| Rule  | Flag Type              | Severity | Trigger                                                   |
+|-------|------------------------|----------|-----------------------------------------------------------|
+| R-01  | `HASH_MISMATCH`        | HIGH     | SHA-256 digest differs from verified baseline             |
+| R-02  | `NEW_FILE`             | MEDIUM   | File absent from baseline snapshot                        |
+| R-03  | `DELETED_FILE`         | HIGH     | File present in baseline but missing from evidence        |
+| R-04  | `TIMESTAMP_ANOMALY`    | MEDIUM   | mtime < ctime or atime < mtime                            |
+| R-05  | `HIDDEN_FILE`          | LOW      | Dot-prefixed filename used for concealment                |
+| R-06  | `HIGH_ENTROPY`         | MEDIUM   | Shannon entropy > 7.2 in a plaintext file type            |
+| R-07  | `DISGUISED_FILE`       | HIGH     | File extension does not match internal magic bytes        |
+| R-08  | `SUSPICIOUS_EXECUTABLE`| HIGH     | .exe / .dll found in evidence collection                  |
+| R-09  | `EXIF_STRIPPED`        | MEDIUM   | JPEG image lacks EXIF metadata                            |
+| R-10  | `ANTI_FORENSIC`        | HIGH     | Content changed (hash mismatch) but timestamps unmodified |
+
+---
+
 ## Roadmap
 
-- **Phase 3** — PDF report generation with ReportLab + Jinja2 templates
-- **Phase 4** — Chain of custody log, investigator sign-off
-- **Phase 5** — File carving, deleted file recovery
+- **Phase 4** — PDF report generation with ReportLab + Jinja2 templates
+- **Phase 5** — Chain of custody log, investigator sign-off
+- **Phase 6** — File carving, deleted file recovery

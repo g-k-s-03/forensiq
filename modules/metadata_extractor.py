@@ -1,6 +1,10 @@
+import logging
 from pathlib import Path
 from typing import Any, Dict, List
 import datetime
+
+# exifread emits noisy warnings for non-EXIF files (e.g. disguised PDFs with .jpg extension)
+logging.getLogger("exifread").setLevel(logging.CRITICAL + 1)
 
 
 def _format_size(size_bytes: int) -> str:
