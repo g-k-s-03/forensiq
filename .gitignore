@@ -1,4 +1,3 @@
-# .gitignore
 __pycache__/
 *.pyc
 *.pyo
@@ -6,3 +5,7 @@ output/
 *.pdf
 *.json
 .env
+venv/
+.venv/
+baseline*.json
+sample_evidence/browser/
