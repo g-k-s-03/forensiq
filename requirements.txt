@@ -6,3 +6,6 @@ piexif
 pandas
 reportlab
 jinja2
+fastapi
+uvicorn
+python-multipart

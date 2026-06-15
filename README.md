@@ -172,6 +172,7 @@ Produces `output/CASE-003_full_analysis.json` with case metadata, summary counts
 ```
 forensiq/
 ├── main.py                          # CLI entry point (Typer)
+├── run_api.py                       # FastAPI server entry point
 ├── modules/
 │   ├── __init__.py
 │   ├── metadata_extractor.py        # File metadata + EXIF extraction
@@ -179,6 +180,14 @@ forensiq/
 │   ├── browser_forensics.py         # Chrome/Edge/Firefox extraction, WAL & freelist recovery
 │   ├── timeline_builder.py          # Unified chronological timeline builder
 │   └── report_generator.py          # ReportLab PDF report generator
+├── api/
+│   ├── main.py                      # FastAPI app, CORS, router registration
+│   ├── schemas.py                   # Pydantic request/response models
+│   ├── job_store.py                 # Thread-safe in-memory job state store
+│   └── routes/
+│       ├── analyze.py               # POST /api/analyze, GET status/stream/results
+│       ├── baseline.py              # POST /api/baseline
+│       └── reports.py               # GET /api/reports/* download & list endpoints
 ├── sample_evidence/
 │   ├── docs/                        # Text evidence files (one backdated)
 │   ├── images/                      # JPEG with EXIF + wiped JPEG
@@ -208,8 +217,53 @@ forensiq/
 
 ---
 
+## Running the Web API
+
+```bash
+pip install -r requirements.txt
+python run_api.py
+```
+
+API available at `http://localhost:8000`
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | API info and status |
+| `/api/health` | GET | Health check |
+| `/api/analyze` | POST | Start a background analysis job |
+| `/api/analyze/{job_id}` | GET | Poll job status (0-100% progress) |
+| `/api/analyze/{job_id}/stream` | GET | Server-Sent Events live progress stream |
+| `/api/analyze/{job_id}/results` | GET | Retrieve full results when complete |
+| `/api/baseline` | POST | Save a hash baseline |
+| `/api/reports/list` | GET | List all case IDs with output files |
+| `/api/reports/{case_id}/pdf` | GET | Download PDF report |
+| `/api/reports/{case_id}/json` | GET | Download full JSON export |
+| `/api/reports/{case_id}/timeline` | GET | Download timeline JSON |
+| `/api/reports/{case_id}/hashes` | GET | Download hash manifest |
+
+### Example: run a full analysis via API
+
+```bash
+# Start job
+curl -s -X POST http://localhost:8000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"evidence_dir":"./sample_evidence","case_id":"API-001","investigator":"Gaurav Kumar","generate_pdf":true,"export_json":true}'
+
+# Poll status
+curl -s http://localhost:8000/api/analyze/<job_id>
+
+# Get results
+curl -s http://localhost:8000/api/analyze/<job_id>/results
+
+# List all reports
+curl -s http://localhost:8000/api/reports/list
+```
+
+---
+
 ## Roadmap
 
+- **Phase F2**: React frontend (job submission, live SSE progress bar, results dashboard)
 - **Phase 8**: Memory forensics (Volatility3 integration)
 - **Phase 9**: Network forensics (PCAP parsing with Scapy)
 - **Phase 10**: Mobile device forensics (Android/iOS artifact extraction)
