@@ -1,5 +1,6 @@
 import json
 import typer
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from rich.console import Console
@@ -15,6 +16,7 @@ from modules.browser_forensics import (
     get_prefetch_evidence,
 )
 from modules.timeline_builder import build_timeline, export_timeline_json
+from modules.report_generator import generate_report
 
 app = typer.Typer(help="ForensIQ — Digital Forensics Evidence Analyzer")
 console = Console()
@@ -364,6 +366,34 @@ def analyze(
         console.print(f"  {line}")
         console.print()
 
+    # ── Phase 6: PDF Report ───────────────────────────────────────────────────
+    console.print()
+    console.rule("[bold blue]PDF Report[/bold blue]")
+
+    analysis_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    report_data = {
+        "case_id":          case_id,
+        "investigator":     investigator,
+        "device_info":      device,
+        "evidence_dir":     str(evidence_dir.resolve()),
+        "analysis_time":    analysis_time,
+        "metadata_results": results,
+        "hash_results":     current_hashes,
+        "tamper_flags":     flags,
+        "browser_artifacts":artifacts,
+        "recovered_records":recovered,
+        "dns_cache":        dns_entries,
+        "prefetch_evidence":pf_entries,
+        "timeline":         timeline,
+    }
+    pdf_path = output_path / f"{case_id}_forensics_report.pdf"
+    try:
+        generate_report(report_data, str(pdf_path))
+        console.print(f"  Report saved -> [green]{pdf_path}[/green]")
+    except Exception as _pdf_err:
+        console.print(f"  [red]PDF generation failed:[/red] {_pdf_err}")
+        pdf_path = None
+
     # ── Summary ───────────────────────────────────────────────────────────────
     hidden_count  = sum(1 for r in results if r["name"].startswith("."))
     exif_count    = len(exif_files)
@@ -408,6 +438,8 @@ def analyze(
         f"[yellow]{tl_inferred} INFERRED[/yellow] / "
         f"[cyan]{tl_recovered} RECOVERED[/cyan])"
     )
+    if pdf_path:
+        console.print(f"  PDF Report:                     [green]{pdf_path}[/green]")
     console.print()
 
 

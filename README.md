@@ -202,8 +202,29 @@ forensiq/
 
 ---
 
+### Phase 6 — Court-Admissible PDF Report Generator
+- **ReportLab-powered PDF** with A4 pages, 2.5cm margins, page headers and footers
+- **9-section structure**:
+  1. Cover page — case details, Section 65B subtitle, RESTRICTED classification
+  2. Section 65B Certificate — investigator name filled in, with signature block
+  3. Chain of Custody — 3-step acquisition/examination/report table
+  4. Case Summary — examination details + findings overview with counts
+  5. File Inventory & Hash Manifest — all files with SHA-256 (first 24 chars), flagged files marked
+  6. Tamper Detection Findings — all flags with rule ID, color-coded severity
+  7. Browser Forensic Findings — history, downloads, cookies, DNS cache subsections
+  8. Forensic Timeline — chronological events; unknown-timestamp events listed separately
+  9. Examiner Declaration — declaration text, signature block, IMPORTANT note box
+- **"Page X of Y"** footer via two-pass numbered canvas (no third-party dependency)
+- **Color-coded severity**: HIGH=red, MEDIUM=orange, LOW=blue in PDF tables
+- **Zero AI conclusions**: every section uses only factual, tabular, observable data
+- **Output**: `output/<case_id>_forensics_report.pdf`
+
+> **LEGAL DISCLAIMER:** ForensIQ generates forensic worksheets for examiner review.
+> Reports require physical signature and Section 65B certification by a qualified
+> forensic examiner before submission to any court. This tool does not provide
+> legal conclusions.
+
 ## Roadmap
 
-- **Phase 6** — PDF report generation with ReportLab + Jinja2 templates
 - **Phase 7** — Chain of custody log, investigator sign-off
 - **Phase 8** — File carving, deleted file recovery
