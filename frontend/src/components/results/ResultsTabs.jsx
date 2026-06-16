@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import SummaryCards from './SummaryCards'
 import TamperFlagsTable from './TamperFlagsTable'
+import BrowserForensicsView from './browser/BrowserForensicsView'
+import TimelineView from './timeline/TimelineView'
 
 function TabBtn({ label, active, badge, badgeRed, onClick }) {
   return (
@@ -26,20 +28,12 @@ function TabBtn({ label, active, badge, badgeRed, onClick }) {
   )
 }
 
-function Placeholder({ text }) {
-  return (
-    <div className="flex items-center justify-center h-40 rounded-xl border border-dashed border-slate-700 text-slate-500 text-sm">
-      {text}
-    </div>
-  )
-}
-
 export default function ResultsTabs({ results }) {
   const [active, setActive] = useState('overview')
-  const s = results.summary ?? {}
-  const flags = results.tamper_flags ?? []
-  const hasHigh = (s.high_flags ?? 0) > 0
 
+  const s            = results.summary ?? {}
+  const flags        = results.tamper_flags ?? []
+  const hasHigh      = (s.high_flags ?? 0) > 0
   const browserCount = (s.browser_history_live ?? 0) + (s.browser_history_recovered ?? 0)
 
   return (
@@ -77,14 +71,22 @@ export default function ResultsTabs({ results }) {
         {active === 'overview' && (
           <SummaryCards summary={s} tamperFlags={flags} />
         )}
+
         {active === 'tamper' && (
           <TamperFlagsTable flags={flags} />
         )}
+
         {active === 'browser' && (
-          <Placeholder text="Browser Forensics — coming in F4" />
+          <BrowserForensicsView
+            browserHistory={results.browser_history ?? []}
+            downloads={results.downloads ?? []}
+            cookies={results.cookies ?? []}
+            dnsCcache={results.dns_cache ?? []}
+          />
         )}
+
         {active === 'timeline' && (
-          <Placeholder text="Timeline — coming in F4" />
+          <TimelineView timeline={results.timeline ?? []} />
         )}
       </div>
     </div>
