@@ -1,20 +1,13 @@
 import { CheckCircle } from 'lucide-react'
+import Badge from '../ui/Badge'
 
-const SEV_STYLE = {
-  HIGH:   'bg-red-900/70 text-red-300 border border-red-700/50',
-  MEDIUM: 'bg-orange-900/60 text-orange-300 border border-orange-700/50',
-  LOW:    'bg-blue-900/60 text-blue-300 border border-blue-700/50',
-}
+const SEV_COLOR = { HIGH: 'red', MEDIUM: 'orange', LOW: 'blue' }
+const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
 const ruleId = (ruleStr = '') => {
   const m = ruleStr.match(/R-\d+/)
   return m ? m[0] : '—'
 }
-
-const trunc = (s = '', n = 50) =>
-  s.length <= n ? s : s.slice(0, n - 1) + '…'
-
-const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 
 export default function TamperFlagsTable({ flags = [] }) {
   if (!flags.length) {
@@ -36,58 +29,34 @@ export default function TamperFlagsTable({ flags = [] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-900 border-b border-slate-700/60 text-left sticky top-0 z-10">
-              <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-16">
-                Rule
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-24">
-                Severity
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider w-44">
-                Type
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                File
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Detail
-              </th>
+              {['Rule', 'Severity', 'Type', 'File', 'Detail'].map((h) => (
+                <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {sorted.map((f, i) => (
-              <tr
-                key={i}
-                className="bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
-              >
-                <td className="px-4 py-3">
-                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">
-                    {ruleId(f.rule)}
-                  </span>
+              <tr key={i} className="bg-slate-800/40 hover:bg-slate-800/70 transition-colors">
+                <td className="px-4 py-3 w-16">
+                  <Badge color="slate">
+                    <span className="font-mono">{ruleId(f.rule)}</span>
+                  </Badge>
                 </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${
-                      SEV_STYLE[f.severity] ?? 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {f.severity}
-                  </span>
+                <td className="px-4 py-3 w-24">
+                  <Badge color={SEV_COLOR[f.severity] ?? 'slate'}>{f.severity}</Badge>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 w-44">
                   <span className="font-mono text-xs text-slate-200">{f.type}</span>
                 </td>
                 <td className="px-4 py-3 max-w-xs">
-                  <span
-                    className="font-mono text-xs text-slate-300 block truncate"
-                    title={f.file}
-                  >
-                    {trunc(f.file ?? '', 50)}
+                  <span className="font-mono text-xs text-slate-300 block truncate" title={f.file}>
+                    {f.file && f.file.length > 50 ? f.file.slice(0, 49) + '…' : (f.file ?? '—')}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-xs text-slate-400 leading-relaxed">
-                    {f.detail}
-                  </span>
+                  <span className="text-xs text-slate-400 leading-relaxed">{f.detail}</span>
                 </td>
               </tr>
             ))}

@@ -3,6 +3,7 @@ import Header from './components/Header'
 import CaseForm from './components/CaseForm'
 import ProgressStream from './components/ProgressStream'
 import ResultsView from './components/results/ResultsView'
+import RecentCases from './components/RecentCases'
 
 const NarrowCard = ({ title, subtitle, children }) => (
   <div className="w-full max-w-2xl rounded-2xl border border-slate-700/60 bg-slate-800 shadow-2xl shadow-black/40 p-7">
@@ -63,6 +64,9 @@ export default function App() {
               >
                 <CaseForm onJobStarted={handleJobStarted} />
               </NarrowCard>
+              <div className="w-full max-w-2xl mt-2">
+                <RecentCases />
+              </div>
             </>
           )}
 

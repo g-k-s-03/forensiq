@@ -217,18 +217,44 @@ forensiq/
 
 ---
 
-## Running the Web API
+## Quick Start (Production — Full Web App)
 
-```bash
+Builds the React frontend and serves everything from a single FastAPI server:
+
+```powershell
+cd forensiq
 pip install -r requirements.txt
-python run_api.py
+python start.py          # builds frontend then starts API at http://localhost:8000
 ```
 
-API available at `http://localhost:8000`
+Open `http://localhost:8000` in your browser.
+
+---
+
+## Quick Start (Development — Hot Reload)
+
+Run backend and frontend separately for faster iteration:
+
+```powershell
+# Terminal 1 — API (with hot reload)
+cd forensiq
+pip install -r requirements.txt
+python run_api.py        # http://localhost:8000
+
+# Terminal 2 — Frontend (with hot module replacement)
+cd forensiq/frontend
+npm install
+npm run dev              # http://localhost:5173
+```
+
+---
+
+## Running the Web API
+
+API available at `http://localhost:8000` (production) or `http://localhost:8000` / `http://localhost:5173` (dev)
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/` | GET | API info and status |
 | `/api/health` | GET | Health check |
 | `/api/analyze` | POST | Start a background analysis job |
 | `/api/analyze/{job_id}` | GET | Poll job status (0-100% progress) |
@@ -263,7 +289,6 @@ curl -s http://localhost:8000/api/reports/list
 
 ## Roadmap
 
-- **Phase F2**: React frontend (job submission, live SSE progress bar, results dashboard)
 - **Phase 8**: Memory forensics (Volatility3 integration)
 - **Phase 9**: Network forensics (PCAP parsing with Scapy)
 - **Phase 10**: Mobile device forensics (Android/iOS artifact extraction)

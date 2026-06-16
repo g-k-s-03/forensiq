@@ -3,6 +3,7 @@ import SummaryCards from './SummaryCards'
 import TamperFlagsTable from './TamperFlagsTable'
 import BrowserForensicsView from './browser/BrowserForensicsView'
 import TimelineView from './timeline/TimelineView'
+import FileInventoryTable from './FileInventoryTable'
 
 function TabBtn({ label, active, badge, badgeRed, onClick }) {
   return (
@@ -35,6 +36,7 @@ export default function ResultsTabs({ results }) {
   const flags        = results.tamper_flags ?? []
   const hasHigh      = (s.high_flags ?? 0) > 0
   const browserCount = (s.browser_history_live ?? 0) + (s.browser_history_recovered ?? 0)
+  const inventory    = results.file_inventory ?? []
 
   return (
     <div className="flex flex-col">
@@ -64,6 +66,12 @@ export default function ResultsTabs({ results }) {
           badge={s.timeline_events}
           onClick={() => setActive('timeline')}
         />
+        <TabBtn
+          label="File Inventory"
+          active={active === 'inventory'}
+          badge={inventory.length}
+          onClick={() => setActive('inventory')}
+        />
       </div>
 
       {/* Tab content */}
@@ -87,6 +95,10 @@ export default function ResultsTabs({ results }) {
 
         {active === 'timeline' && (
           <TimelineView timeline={results.timeline ?? []} />
+        )}
+
+        {active === 'inventory' && (
+          <FileInventoryTable files={inventory} tamperFlags={flags} />
         )}
       </div>
     </div>

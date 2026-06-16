@@ -9,3 +9,6 @@ venv/
 .venv/
 baseline*.json
 sample_evidence/browser/
+static/
+frontend/node_modules/
+frontend/dist/

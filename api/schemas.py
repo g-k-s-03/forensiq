@@ -37,3 +37,4 @@ class AnalysisResult(BaseModel):
     dns_cache: List[Dict]
     timeline: List[Dict]
     output_files: Dict   # {"pdf": path|None, "json": path|None, "hashes": path, "timeline": path}
+    file_inventory: List[Dict] = []

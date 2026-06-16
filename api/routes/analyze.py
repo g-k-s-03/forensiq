@@ -225,6 +225,18 @@ def _run_pipeline(job_id: str, request: AnalyzeRequest) -> None:
                     else None
                 ),
             },
+            "file_inventory": [
+                {
+                    "name": r["name"],
+                    "rel_path": r.get("rel_path", r["name"]),
+                    "extension": r.get("extension", ""),
+                    "size_human": r.get("size_human", ""),
+                    "created": r.get("created", ""),
+                    "modified": r.get("modified", ""),
+                    "sha256": hash_results.get(r.get("rel_path", r["name"]), ""),
+                }
+                for r in metadata_results
+            ],
         }
         update_job(
             job_id,
