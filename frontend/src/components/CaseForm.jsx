@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, AlertCircle } from 'lucide-react'
+import { Search, AlertCircle, CheckCircle } from 'lucide-react'
 import { startAnalysis } from '../api/client'
 
 const Toggle = ({ checked, onChange, label }) => (
@@ -47,6 +47,7 @@ export default function CaseForm({ onJobStarted }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -65,7 +66,8 @@ export default function CaseForm({ onJobStarted }) {
       }
       if (form.baseline_path) payload.baseline_path = form.baseline_path
       const { job_id } = await startAnalysis(payload)
-      onJobStarted(job_id, form.case_id)
+      setToast(`Analysis started. Job ID: ${job_id}`)
+      setTimeout(() => onJobStarted(job_id, form.case_id), 1500)
     } catch (err) {
       const msg =
         err.response?.data?.detail || err.message || 'Failed to start analysis.'
@@ -160,6 +162,13 @@ export default function CaseForm({ onJobStarted }) {
         <Search size={16} />
         {submitting ? 'Starting…' : 'Start Analysis'}
       </button>
+
+      {toast && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+          <CheckCircle size={15} className="shrink-0" />
+          {toast}
+        </div>
+      )}
     </form>
   )
 }

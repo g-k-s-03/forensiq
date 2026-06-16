@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle, Circle, AlertCircle, Loader } from 'lucide-react'
+import { CheckCircle, Circle, AlertCircle, Loader, Timer } from 'lucide-react'
 import { getJobResults } from '../api/client'
+
+const fmtElapsed = (s) =>
+  s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
 
 const STEPS = [
   { label: 'Metadata Extraction',   threshold: 10 },
@@ -16,7 +19,20 @@ export default function ProgressStream({ jobId, caseId, onComplete }) {
   const [step, setStep]           = useState('Connecting…')
   const [status, setStatus]       = useState('running')
   const [error, setError]         = useState(null)
-  const esRef = useRef(null)
+  const [elapsed, setElapsed]     = useState(0)
+  const esRef     = useRef(null)
+  const timerRef  = useRef(null)
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => clearInterval(timerRef.current)
+  }, [])
+
+  useEffect(() => {
+    if (status === 'complete' || status === 'failed') {
+      clearInterval(timerRef.current)
+    }
+  }, [status])
 
   useEffect(() => {
     const es = new EventSource(
@@ -77,7 +93,13 @@ export default function ProgressStream({ jobId, caseId, onComplete }) {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-400">{step}</span>
-          <span className="font-mono font-semibold text-blue-400">{progress}%</span>
+          <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-xs text-slate-500 font-mono">
+                <Timer size={11} />
+                {fmtElapsed(elapsed)}
+              </span>
+              <span className="font-mono font-semibold text-blue-400">{progress}%</span>
+            </div>
         </div>
         <div className="h-3 w-full overflow-hidden rounded-full bg-slate-700">
           <div
